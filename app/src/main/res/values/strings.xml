@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Testing MQTT</string>
+    <string name="chosen_time_range">%1$s:%2$s - %3$s:%4$s</string>
+</resources>
