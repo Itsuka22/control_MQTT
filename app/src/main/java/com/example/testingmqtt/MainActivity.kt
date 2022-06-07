@@ -1,6 +1,8 @@
 package com.example.testingmqtt
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.content.Intent
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -10,7 +12,10 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContentProviderCompat.requireContext
+import androidx.core.os.bundleOf
 import com.example.testingmqtt.databinding.ActivityMainBinding
+import com.example.testingmqtt.growlight.SettingAbsenBottomSheet
+import com.example.testingmqtt.models.JadwalPreferences
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -21,16 +26,22 @@ import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
 import zion830.com.range_picker_dialog.TimeRangePickerDialog
 import zion830.com.range_picker_dialog.databinding.TimeRangePickerDialogBinding
+import java.lang.reflect.Parameter
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
+import kotlin.concurrent.timer
+import kotlin.math.log
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.DurationUnit
 
-class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeSelectedListener {
+class MainActivity : AppCompatActivity(){
 
     lateinit var binding: ActivityMainBinding
     private lateinit var textview: TextView
     private var selectedHour: Int? = null
     private var selectedMinute: Int? = null
-    private val tagBottomSheetTimeRangePicker = "tagBottomSheetTimeRangePicker"
     private val mqttClient by lazy {
         MqttClientHelper(this)
     }
@@ -42,15 +53,19 @@ class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeS
         setContentView(binding.root)
         setMqttCallBack()
         setClickListener()
+        initialisation()
 
 //        var button : Button = findViewById(R.id.button)
 //        var buttonsub: Button = findViewById(R.id.buttonsub)
 
 
+
+
+
         binding.button.setOnClickListener {
             var snackbarMsg : String
             val topic = "test-mqtt"
-            val msg = "Hello, world!"
+            val msg = binding.tvRangeTime.text.toString()
             snackbarMsg = try {
                 mqttClient.publish(topic, msg)
                 "Published to topic '$topic'"
@@ -85,16 +100,18 @@ class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeS
         binding.timegrowlightFrom.setOnClickListener {
             showTimePicker()
         }
-        binding.btnSet.setOnClickListener {
-            showTimerange()
-        }
         binding.btnOk.setOnClickListener {
-
+            val jamMulai = binding.timegrowlightFrom.text
+            val jamSampai = binding.timegrowlightTo.text
+            val duration = getDurationDescription(this, Duration.ofHours(1))
+            val timeRange = "[$jamMulai-$jamSampai] $duration"
+            binding.tvRangeTime.text = timeRange
         }
         binding.timegrowlightTo.setOnClickListener {
             showTimePicker2()
         }
     }
+
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun showTimePicker() {
@@ -110,7 +127,6 @@ class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeS
                 addOnPositiveButtonClickListener { onTimeSelected(this.hour, this.minute) }
             }.show(supportFragmentManager, MaterialTimePicker::class.java.canonicalName)
     }
-
     @RequiresApi(Build.VERSION_CODES.O)
     private fun onTimeSelected(hour: Int, minute: Int) {
         selectedHour = hour
@@ -148,8 +164,49 @@ class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeS
         "$hourAsText:$minuteAsText".also { findViewById<TextView>(R.id.timegrowlight_to).text = it }
     }
 
-    fun duration(){
+    fun initialisation(){
+        val SettingGrowlight = JadwalPreferences
 
+//        binding.btnSet.setOnClickListener {
+//            val bundle = bundleOf(KEYKIRIMWAKTU to "Senin")
+//            print(bundle)
+//        }
+    }
+
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getDurationDescription(context: Context, duration: Duration): String {
+        if (duration.isNegative) {
+            return "-(${getDurationDescription(context, duration.negated())})"
+        }
+        val daysPart = duration.toDays().toInt()
+        val hoursPart = duration.toHours().toInt() % 24
+        val minutesPart = duration.toMinutes().toInt() % 60
+        return if (daysPart > 0) {
+            context.getString(
+                R.string.duration_format_days_hours_minutes,
+                daysPart,
+                context.resources.getQuantityString(R.plurals.days, daysPart),
+                hoursPart,
+                context.resources.getQuantityString(R.plurals.hours, hoursPart),
+                minutesPart,
+                context.resources.getQuantityString(R.plurals.minutes, minutesPart)
+            )
+        } else if (hoursPart > 0) {
+            context.getString(
+                R.string.duration_format_hours_minutes,
+                hoursPart,
+                context.resources.getQuantityString(R.plurals.hours, hoursPart),
+                minutesPart,
+                context.resources.getQuantityString(R.plurals.minutes, minutesPart)
+            )
+        } else {
+            context.getString(
+                R.string.duration_format_minutes,
+                minutesPart,
+                context.resources.getQuantityString(R.plurals.minutes, minutesPart)
+            )
+        }
     }
 
 
@@ -158,37 +215,6 @@ class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeS
     // INI LIBRARY BOTTOM RANGE TIME PICKER
 
 
-    private fun showTimerange(){
-       BottomSheetTimeRangePicker
-           .newInstance(this, DateFormat.is24HourFormat(this))
-           .show(supportFragmentManager, tagBottomSheetTimeRangePicker)
-    }
-
-
-
-    override fun onTimeRangeSelected(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
-        var startHourString = startHour.toString()
-        var startMinuteString = startMinute.toString()
-        var endHourString = endHour.toString()
-        var endMinuteString = endMinute.toString()
-        when {
-            startHour < 9 -> startHourString = startHour.toString().prependZero()
-            startMinute < 9 -> startMinuteString = startMinute.toString().prependZero()
-            endHour < 9 -> endHourString = endHour.toString().prependZero()
-            endMinute < 9 -> endMinuteString = endMinute.toString().prependZero()
-        }
-
-       binding.tvRangeTime.text= getString(
-            R.string.chosen_time_range,
-            startHourString,
-            startMinuteString,
-            endHourString,
-            endMinuteString
-        )
-    }
-    private fun String.prependZero(): String {
-        return "0".plus(this)
-    }
 
 
 //    INI MQTT NYA
@@ -218,5 +244,11 @@ class MainActivity : AppCompatActivity(),BottomSheetTimeRangePicker.OnTimeRangeS
             }
         })
     }
+
+    companion object{
+        const val KEYKIRIMWAKTU = "KirimWaktu"
+    }
+
+
 
 }

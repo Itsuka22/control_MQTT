@@ -1,4 +1,21 @@
 <resources>
     <string name="app_name">Testing MQTT</string>
     <string name="chosen_time_range">%1$s:%2$s - %3$s:%4$s</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="duration_format_days_hours_minutes">%1$d %2$s, %3$d %4$s and %5$d %6$s</string>
+    <string name="duration_format_hours_minutes">%1$d %2$s and %3$d %4$s</string>
+    <string name="duration_format_minutes">%1$d %2$s</string>
+    <plurals name="days">
+        <item quantity="one">day</item>
+        <item quantity="other">days</item>
+    </plurals>
+    <plurals name="hours">
+        <item quantity="one">hour</item>
+        <item quantity="other">hours</item>
+    </plurals>
+    <plurals name="minutes">
+        <item quantity="one">minute</item>
+        <item quantity="other">minutes</item>
+    </plurals>
 </resources>
