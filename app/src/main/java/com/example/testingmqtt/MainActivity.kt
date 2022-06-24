@@ -1,51 +1,60 @@
 package com.example.testingmqtt
 
+
 import android.annotation.SuppressLint
-import android.content.Context
+import android.app.Activity
 import android.content.Intent
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.text.format.DateFormat
 import android.util.Log
-import android.widget.Button
+import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
-import androidx.core.content.ContentProviderCompat.requireContext
-import androidx.core.os.bundleOf
+import androidx.lifecycle.ViewModel
+import androidx.recyclerview.widget.ConcatAdapter
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
+import com.example.testingmqtt.adapter.GrowlightAdapter
 import com.example.testingmqtt.databinding.ActivityMainBinding
-import com.example.testingmqtt.growlight.SettingAbsenBottomSheet
+import com.example.testingmqtt.models.Growlight
+import com.example.testingmqtt.models.GrowlightListViewModelFactory
+import com.example.testingmqtt.models.GrowlightViewModel
 import com.example.testingmqtt.models.JadwalPreferences
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
-import me.adawoud.bottomsheettimepicker.BottomSheetTimeRangePicker
+import com.google.gson.Gson
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken
 import org.eclipse.paho.client.mqttv3.MqttCallbackExtended
 import org.eclipse.paho.client.mqttv3.MqttException
 import org.eclipse.paho.client.mqttv3.MqttMessage
-import zion830.com.range_picker_dialog.TimeRangePickerDialog
-import zion830.com.range_picker_dialog.databinding.TimeRangePickerDialogBinding
-import java.lang.reflect.Parameter
-import java.time.Duration
 import java.time.LocalDateTime
-import java.util.*
-import kotlin.concurrent.timer
 import kotlin.math.log
-import kotlin.time.Duration.Companion.days
-import kotlin.time.Duration.Companion.hours
-import kotlin.time.DurationUnit
 
+
+//const val GROWLIGHT_ID = "growlight id"
 class MainActivity : AppCompatActivity(){
-
+    private val newFlowerActivityRequestCode = 1
     lateinit var binding: ActivityMainBinding
     private lateinit var textview: TextView
     private var selectedHour: Int? = null
     private var selectedMinute: Int? = null
+    private lateinit var adapter: GrowlightAdapter
+    private lateinit var recyclerView: RecyclerView
+    private lateinit var viewManager: RecyclerView.LayoutManager
+    private val growlightListViewModel by viewModels<GrowlightViewModel> {
+        GrowlightListViewModelFactory(this)
+    }
+    var growlights : List<GrowlightAdapter> = listOf()
     private val mqttClient by lazy {
         MqttClientHelper(this)
     }
 
+
+    @SuppressLint("WrongConstant")
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,17 +64,18 @@ class MainActivity : AppCompatActivity(){
         setClickListener()
         initialisation()
 
-//        var button : Button = findViewById(R.id.button)
-//        var buttonsub: Button = findViewById(R.id.buttonsub)
 
 
 
-
+//        BUTTON PUBLISH DAN SUSCRIBE MQTT
 
         binding.button.setOnClickListener {
             var snackbarMsg : String
-            val topic = "test-mqtt"
-            val msg = binding.tvRangeTime.text.toString()
+            val topic = "inastek/growlight"
+            val waktu = Growlight(jamawal = "${binding.timegrowlightFrom.text}", id = 1, jamakhir = "${binding.timegrowlightTo.text}")
+            val waktugson = Gson().toJson(waktu)
+            Log.d("Object to json",waktugson)
+            val msg = "$waktugson"
             snackbarMsg = try {
                 mqttClient.publish(topic, msg)
                 "Published to topic '$topic'"
@@ -78,7 +88,7 @@ class MainActivity : AppCompatActivity(){
 
         binding.buttonsub.setOnClickListener { view ->
             var snackbarMsg : String
-            val topic = "mqtt-test-sub"
+            val topic = "inastek/growlight"
             snackbarMsg = "Cannot subscribe to empty topic!"
             if (topic.isNotEmpty()) {
                 snackbarMsg = try {
@@ -87,12 +97,62 @@ class MainActivity : AppCompatActivity(){
                 } catch (ex: MqttException) {
                     "Error subscribing to topic: $topic"
                 }
+
             }
             Snackbar.make(view, snackbarMsg, Snackbar.LENGTH_SHORT)
                 .setAction("Action", null).show()
         }
 
+//        Dan Lain2
+        binding.btnGrowlight.setOnClickListener {
+            val intent = Intent(this, GrowlightActivity::class.java)
+            startActivity(intent)
+        }
+
+//        untuk Kirim data recycle vie mqtt semua ke broker
+        binding.btnMqtt.setOnClickListener {
+            val waktu = Growlight(jamawal = "$binding", id = 1, jamakhir = "jamakhir")
+            val waktugson = Gson().toJson(waktu)
+            Log.d("Object to json",waktugson)
+            val msg = "$waktugson"
+            val topic = "inastek/growlight"
+            mqttClient.publish(msg,topic)
+
+        }
+
+
+//        val flowerName = data.getStringExtra(FLOWER_NAME)
+//        val flowerDescription = data.getStringExtra(FLOWER_DESCRIPTION)
+
+//        flowersListViewModel.insertFlower(flowerName, flowerDescription)
     }
+
+
+
+
+
+    fun tampil(){
+        val linearLayoutManager = LinearLayoutManager(this)
+        linearLayoutManager.orientation = RecyclerView.VERTICAL
+        binding.rvRecordjadwal.layoutManager = linearLayoutManager
+        val growlightAdapter = GrowlightAdapter { growlight -> selectedHour }
+        val concatAdapter = ConcatAdapter(growlightAdapter)
+
+        growlightListViewModel.growlightLiveData.observe(this, {
+            it?.let {
+                growlightAdapter.submitList(it as MutableList<Growlight>)
+            }
+        })
+        val recyclerView: RecyclerView = binding.rvRecordjadwal
+        recyclerView.adapter = concatAdapter
+        val jamMulai = binding.timegrowlightFrom.text
+        val jamSampai = binding.timegrowlightTo.text
+//            val duration = getDurationDescription(this, Duration.ofHours(1))
+        growlightListViewModel.insertWaktu(jamMulai.toString(),jamSampai.toString())
+//        val timeRange = "[$jamMulai-$jamSampai]"
+//        binding.tvRangeTime.text = timeRange
+    }
+
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -101,15 +161,15 @@ class MainActivity : AppCompatActivity(){
             showTimePicker()
         }
         binding.btnOk.setOnClickListener {
-            val jamMulai = binding.timegrowlightFrom.text
-            val jamSampai = binding.timegrowlightTo.text
-            val duration = getDurationDescription(this, Duration.ofHours(1))
-            val timeRange = "[$jamMulai-$jamSampai] $duration"
-            binding.tvRangeTime.text = timeRange
+            tampil()
         }
+
         binding.timegrowlightTo.setOnClickListener {
             showTimePicker2()
         }
+
+//        meneylesaikan pengiriman mqtt
+
     }
 
 
@@ -173,41 +233,19 @@ class MainActivity : AppCompatActivity(){
 //        }
     }
 
+//    override fun onActivityResult(requestCode: Int, resultCode: Int, waktudata: Intent?) {
+//        super.onActivityResult(requestCode, resultCode, waktudata)
+//        if(requestCode == newFlowerActivityRequestCode && resultCode == Activity.RESULT_OK){
+//            waktudata?.let { data ->
+//                val waktuawal= data.getStringExtra(WAKTU_AWAL)
+//                val waktuakhir = data.getStringExtra(WAKTU_AKHIR)
+//
+//            GrowlightViewModel
+//
+//            }
+//        }
+//    }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getDurationDescription(context: Context, duration: Duration): String {
-        if (duration.isNegative) {
-            return "-(${getDurationDescription(context, duration.negated())})"
-        }
-        val daysPart = duration.toDays().toInt()
-        val hoursPart = duration.toHours().toInt() % 24
-        val minutesPart = duration.toMinutes().toInt() % 60
-        return if (daysPart > 0) {
-            context.getString(
-                R.string.duration_format_days_hours_minutes,
-                daysPart,
-                context.resources.getQuantityString(R.plurals.days, daysPart),
-                hoursPart,
-                context.resources.getQuantityString(R.plurals.hours, hoursPart),
-                minutesPart,
-                context.resources.getQuantityString(R.plurals.minutes, minutesPart)
-            )
-        } else if (hoursPart > 0) {
-            context.getString(
-                R.string.duration_format_hours_minutes,
-                hoursPart,
-                context.resources.getQuantityString(R.plurals.hours, hoursPart),
-                minutesPart,
-                context.resources.getQuantityString(R.plurals.minutes, minutesPart)
-            )
-        } else {
-            context.getString(
-                R.string.duration_format_minutes,
-                minutesPart,
-                context.resources.getQuantityString(R.plurals.minutes, minutesPart)
-            )
-        }
-    }
 
 
 
@@ -232,11 +270,12 @@ class MainActivity : AppCompatActivity(){
                 Snackbar.make(findViewById(android.R.id.content), snackbarMsg, Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
             }
-            @Throws(Exception::class)
-            override fun messageArrived(topic: String, mqttMessage: MqttMessage) {
+            override fun messageArrived(topic: String?, mqttMessage: MqttMessage?) {
                 Log.w("Debug", "Message received from host '$MQTT_HOST': $mqttMessage")
-                val str: String = "------------"+ Calendar.getInstance().time +"-------------\n$mqttMessage"
-                textview.text = str
+                val str: String = "$mqttMessage"
+                binding.testpesanmqtt.text = str
+
+
             }
 
             override fun deliveryComplete(iMqttDeliveryToken: IMqttDeliveryToken) {
@@ -245,8 +284,16 @@ class MainActivity : AppCompatActivity(){
         })
     }
 
+    fun deleteJam(item: com.example.testingmqtt.models.Growlight) {
+
+
+    }
+
     companion object{
+        const val GROWLIGHT_ID = "flower id"
         const val KEYKIRIMWAKTU = "KirimWaktu"
+        const val WAKTU_AKHIR = "waktu akhir"
+        const val WAKTU_AWAL = "waktu awal"
     }
 
 

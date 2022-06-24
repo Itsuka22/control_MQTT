@@ -18,4 +18,8 @@
         <item quantity="one">minute</item>
         <item quantity="other">minutes</item>
     </plurals>
+
+
+    <string name="waktuawal">14:00r</string>
+    <string name="waktuakhir">16:0r</string>
 </resources>

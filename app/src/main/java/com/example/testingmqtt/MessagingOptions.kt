@@ -1,7 +1,7 @@
 package com.example.testingmqtt
 
-const val CLIENT_USER_NAME = ""
-const val CLIENT_PASSWORD = ""
+const val CLIENT_USER_NAME = "emqx"
+const val CLIENT_PASSWORD = "public"
 const val MQTT_HOST = "tcp://broker.emqx.io:1883"
 // Other options
 const val CONNECTION_TIMEOUT = 3

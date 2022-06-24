@@ -6,4 +6,5 @@ import com.chibatching.kotpref.KotprefModel
 object JadwalPreferences : KotprefModel(){
     var growlightStart by stringPref()
     var growlightEnd by stringPref()
+
 }

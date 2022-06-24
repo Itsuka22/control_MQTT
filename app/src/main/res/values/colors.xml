@@ -19,4 +19,9 @@
     <color name="green700">#5BDE3A</color>
     <color name="green500">#0B9508</color>
 
+
+    <color name="bluelight">#F2F9FF</color>
+    <color name="bluelight200">#5198EC</color>
+
+
 </resources>
