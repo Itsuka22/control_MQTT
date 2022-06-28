@@ -20,6 +20,6 @@
     </plurals>
 
 
-    <string name="waktuawal">14:00r</string>
-    <string name="waktuakhir">16:0r</string>
+    <string name="waktuawal">14:00dummy</string>
+    <string name="waktuakhir">16:00dummy</string>
 </resources>

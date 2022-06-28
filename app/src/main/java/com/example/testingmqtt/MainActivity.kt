@@ -12,11 +12,13 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.example.testingmqtt.adapter.Dbdummy
 import com.example.testingmqtt.adapter.GrowlightAdapter
 import com.example.testingmqtt.databinding.ActivityMainBinding
 import com.example.testingmqtt.models.Growlight
@@ -71,8 +73,8 @@ class MainActivity : AppCompatActivity(){
 
         binding.button.setOnClickListener {
             var snackbarMsg : String
-            val topic = "inastek/growlight"
-            val waktu = Growlight(jamawal = "${binding.timegrowlightFrom.text}", id = 1, jamakhir = "${binding.timegrowlightTo.text}")
+            val topic = "inastek/list"
+            val waktu = growlightListViewModel.growlightLiveData.value
             val waktugson = Gson().toJson(waktu)
             Log.d("Object to json",waktugson)
             val msg = "$waktugson"
@@ -88,7 +90,7 @@ class MainActivity : AppCompatActivity(){
 
         binding.buttonsub.setOnClickListener { view ->
             var snackbarMsg : String
-            val topic = "inastek/growlight"
+            val topic = "inastek/list"
             snackbarMsg = "Cannot subscribe to empty topic!"
             if (topic.isNotEmpty()) {
                 snackbarMsg = try {
@@ -111,12 +113,7 @@ class MainActivity : AppCompatActivity(){
 
 //        untuk Kirim data recycle vie mqtt semua ke broker
         binding.btnMqtt.setOnClickListener {
-            val waktu = Growlight(jamawal = "$binding", id = 1, jamakhir = "jamakhir")
-            val waktugson = Gson().toJson(waktu)
-            Log.d("Object to json",waktugson)
-            val msg = "$waktugson"
-            val topic = "inastek/growlight"
-            mqttClient.publish(msg,topic)
+//            getGrowlightListLive(return@setOnClickListener)
 
         }
 
@@ -127,7 +124,11 @@ class MainActivity : AppCompatActivity(){
 //        flowersListViewModel.insertFlower(flowerName, flowerDescription)
     }
 
+    fun getGrowlightListLive(dbdummy: Dbdummy):  LiveData<List<Growlight>> {
+        val listwaktu = dbdummy.getGrowlightList()
+        return listwaktu
 
+    }
 
 
 

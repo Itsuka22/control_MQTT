@@ -31,6 +31,8 @@ class GrowlightViewModel(val dbsource: Dbdummy) : ViewModel(){
         return dbsource.getWaktuForId(id)
     }
 
+
+
     fun removeWaktu(growlight: Growlight) {
         dbsource.removeWaktu(growlight)
     }
